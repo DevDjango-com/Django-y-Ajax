@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Ajax</title>
+</head>
+<body>
+
+
+<div class="row white">
+    <div class="large-12 columns">
+        <h2>Hola, {{request.user.username}}</h2>
+    </div>
+</div>
+
+<div class="row white">
+    <div class="columns large-12">
+        <form method="POST" id="post-form">
+            {% csrf_token %}
+            <div class="fieldWrapper" id="the_post">
+                {{ form.texto }}
+            </div>
+            <div id="results"></div>
+            <input type="submit" value="Post" class="tiny button">
+        </form>
+    </div>
+</div>
+
+<!-- The feed -->
+<div class="row white">
+    <div class="columns large-12">
+        <ul id="talk">
+            {% for post in post %}
+                <li>
+                    <strong>{{ post.texto }}</strong> -
+                    <em>{{ post.autor }}</em> -
+                    <span>{{ post.creado }}</span> -
+                    <a id='delete-post-{{post.id}}'>Eliminar</a>
+                </li>
+            {% endfor %}
+        </ul>
+    </div>
+</div>
+
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.0.0/jquery.min.js"></script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-modal/0.9.1/jquery.modal.min.js"></script>
+
+<script>
+
+$('#post-form').on('submit', function(event){
+    event.preventDefault();
+    console.log("form Enviado!") 
+    crear_post();
+		
+});
+
+function crear_post() {
+    console.log("crear post esta trabajando!") // prueba de cordura
+    $.ajax({
+        url : "crear_post/", //  endpoint
+        type : "POST", // Metodo http
+        data : { el_post: $('#id_texto').val() }, // datos enviado con la solicitud post
+
+        // si nuestro manejador de respuesta Ajax es exitoso
+        success : function(json) {
+            $('#id_texto').val(''); // eliminamos el texto de nuestro input
+            console.log(json); // registrar el json devuelto en la consola
+            
+    		$("#talk").prepend("<li><strong>"+json.texto+"</strong> - <em> "+json.autor+"</em> - <span> "+json.creado+"</span></li>");
+    			console.log("yes"); // prueba de cordura
+        },
+
+        // manejador de respuesta no exitosa
+        error : function(xhr,errmsg,err) {
+            $('#resultados').html("<div class='alert-box alert radius' data-alert>Oops! We have encountered an error: "+errmsg+
+                " <a href='#' class='close'>&times;</a></div>"); // añadimos el error a nuestro dom
+            console.log(xhr.status + ": " + xhr.responseText); // proveemos un poco mas de informacion del error en nuestra consola
+        }
+   });
+};
+
+
+	
+	    // Esta funcion obtiene un cookie con un nombre de pila
+function getCookie(name) {
+    var cookieValue = null;
+    if (document.cookie && document.cookie != '') {
+        var cookies = document.cookie.split(';');
+        for (var i = 0; i < cookies.length; i++) {
+            var cookie = jQuery.trim(cookies[i]);
+            // ¿Esta cadena de cookies comienza con el nombre que queremos?
+            if (cookie.substring(0, name.length + 1) == (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+var csrftoken = getCookie('csrftoken');
+
+/*
+La funcion abajo creará un header con csrf_token
+*/
+
+function csrfSafeMethod(method) {
+
+    //Este metodo HTTP no requiere la protecion CSRF  
+    return (/^(GET|HEAD|OPTIONS|TRACE)$/.test(method));
+}
+function sameOrigin(url) {
+    //  prueba que una URL dada es una URL del mismo origen
+    // url podría ser relativo o esquema relativo o absoluto
+    var host = document.location.host; // host + port
+    var protocol = document.location.protocol;
+    var sr_origin = '//' + host;
+    var origin = protocol + sr_origin;
+    // Permitir URLs absolutas o relativas al mismo origen
+    return (url == origin || url.slice(0, origin.length + 1) == origin + '/') ||
+        (url == sr_origin || url.slice(0, sr_origin.length + 1) == sr_origin + '/') ||
+        // o cualquier otra URL que no sea un esquema relativo o absoluto, es decir, relativo.
+        !(/^(\/\/|http:|https:).*/.test(url));
+}
+
+$.ajaxSetup({
+    beforeSend: function(xhr, settings) {
+        if (!csrfSafeMethod(settings.type) && sameOrigin(settings.url)) {
+            // Envia el Token al mismo origen,solo URL relativas.
+            // Envíe el token solo si el método garantiza la protección CSRF
+            // Usando el valor CSRFToken adquirido anteriormente
+            xhr.setRequestHeader("X-CSRFToken", csrftoken);
+        }
+    }
+});
+</script>	
+
+</body>
+</html>
